@@ -28,27 +28,27 @@ describe("UrlMatcher", function () {
   });
 
   it("parses search parameters with types", function () {
-    var matcher = new UrlMatcher('/users?{from:integer}&{to:integer}');
+    var matcher = new UrlMatcher('/users?{from:integer}&{with-hypen:integer}');
     var params = matcher.parameters();
     var typeMap = matcher.typeMap;
     expect(params).toContain('from');
-    expect(params).toContain('to');
+    expect(params).toContain('with-hypen');
     expect(typeMap.from).toBe('integer');
-    expect(typeMap.to).toBe('integer'); 
+    expect(typeMap['with-hypen']).toBe('integer'); 
   });
 
   it("parses search parameters with regex", function () {
-    var matcher = new UrlMatcher('/users?{from:[0-9]+}&{to:[0-9]+}');
+    var matcher = new UrlMatcher('/users?{from:[0-9]+}&{with-hypen:[0-9]+}');
     var params = matcher.parameters();
     var fromType = matcher.type('$from');
-    var toType = matcher.type('$to');
+    var toType = matcher.type('$with-hypen');
     var typeMap = matcher.typeMap;
     expect(params).toContain('from');
-    expect(params).toContain('to');
+    expect(params).toContain('with-hypen');
     expect(fromType.pattern).toBe('[0-9]+');
     expect(toType.pattern).toBe('[0-9]+');
     expect(typeMap.from).toBe('$from');
-    expect(typeMap.to).toBe('$to'); 
+    expect(typeMap['with-hypen']).toBe('$with-hypen'); 
   });
 
   it("handles proper snake case parameter names", function(){

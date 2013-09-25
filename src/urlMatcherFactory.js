@@ -57,6 +57,7 @@ function UrlMatcher(pattern) {
   //    \\.                       - a backslash escape
   //    \{(?:[^{}\\]+|\\.)*\}     - a matched set of curly braces containing other atoms
   var placeholder = /([:*])(\w+)|\{(\w+)(?:\:((?:[^{}\\]+|\\.|\{(?:[^{}\\]+|\\.)*\})+))?\}/g,
+      searchPlaceholder = /([:*])(\w+-+\w+)|\{(\w+[-+\w+]*)(?:\:((?:[^{}\\]+|\\.|\{(?:[^{}\\]+|\\.)*\})+))?\}/g,
       names = {}, compiled = '^', last = 0, m,
       segments = this.segments = [],
       params = this.params = [],
@@ -113,8 +114,8 @@ function UrlMatcher(pattern) {
     // Allow parameters to be separated by '?' as well as '&' to make concat() easier
     var searchParams = search.substring(1).split(/[&?]/), j;
     for(j=0;j<searchParams.length;j++) {
-      placeholder.lastIndex = 0;
-      if ((m = placeholder.exec(searchParams[j]))) {
+      searchPlaceholder.lastIndex = 0;
+      if ((m = searchPlaceholder.exec(searchParams[j]))) {
         id = m[2] || m[3]; // IE[78] returns '' for unmatched groups instead of null
         regexp = m[4] || (m[1] == '*' ? '.*' : '[^/]*');
         if (isDefined(types[regexp])) {
