@@ -1,6 +1,6 @@
 /**
  * State-based routing for AngularJS
- * @version v0.2.1
+ * @version v0.2.2
  * @link http://angular-ui.github.com/
  * @license MIT License, http://www.opensource.org/licenses/MIT
  */
@@ -455,13 +455,22 @@ function UrlMatcher(pattern) {
       names = {}, compiled = '^', last = 0, m,
       segments = this.segments = [],
       params = this.params = [],
-      typeMap = this.typeMap = {};
+      type = this.type, types = this.types, typeMap = this.typeMap = {};
 
   function addParameter(id) {
     if (!/^\w+(-+\w+)*$/.test(id)) throw new Error("Invalid parameter name '" + id + "' in pattern '" + pattern + "'");
     if (names[id]) throw new Error("Duplicate parameter name '" + id + "' in pattern '" + pattern + "'");
     names[id] = true;
     params.push(id);
+  }
+
+  function registerAnonymousType(id, regexp) {
+    type('$'+id, {
+      pattern: regexp,
+      encode: function (typeObj) { return typeObj; },
+      decode: function (value) { return value; }
+    });
+    typeMap[id] = '$'+id;
   }
 
   function quoteRegExp(string) {
@@ -476,9 +485,9 @@ function UrlMatcher(pattern) {
   while ((m = placeholder.exec(pattern))) {
     id = m[2] || m[3]; // IE[78] returns '' for unmatched groups instead of null
     regexp = m[4] || (m[1] == '*' ? '.*' : '[^/]*');
-    if (isDefined(this.types[regexp])) {
-      this.typeMap[id] = regexp;
-      regexp = this.types[regexp].pattern; // use the regexp defined for this type instead
+    if (isDefined(types[regexp])) {
+      typeMap[id] = regexp;
+      regexp = types[regexp].pattern; // use the regexp defined for this type instead
     } 
     segment = pattern.substring(last, m.index);
     if (segment.indexOf('?') >= 0) break; // we're into the search part
@@ -497,7 +506,23 @@ function UrlMatcher(pattern) {
     this.sourcePath = pattern.substring(0, last+i);
 
     // Allow parameters to be separated by '?' as well as '&' to make concat() easier
-    forEach(search.substring(1).split(/[&?]/), addParameter);
+    var searchParams = search.substring(1).split(/[&?]/), j;
+    for(j=0;j<searchParams.length;j++) {
+      placeholder.lastIndex = 0;
+      if ((m = placeholder.exec(searchParams[j]))) {
+        id = m[2] || m[3]; // IE[78] returns '' for unmatched groups instead of null
+        regexp = m[4] || (m[1] == '*' ? '.*' : '[^/]*');
+        if (isDefined(types[regexp])) {
+          typeMap[id] = regexp;
+        } else {
+          registerAnonymousType(id, regexp);
+        }
+      }
+      else {
+        id = searchParams[j];
+      }
+      addParameter(id);
+    }
   } else {
     this.sourcePath = pattern;
     this.sourceSearch = '';
@@ -564,22 +589,24 @@ UrlMatcher.prototype.exec = function (path, searchParams) {
     nPath = this.segments.length-1,
     values = {}, i;
 
-  if (nPath !== m.length - 1) throw new Error("Unbalanced capture group in route '" + this.source + "'");
-
-  for (i=0; i<nPath; i++) values[params[i]] = m[i+1];
-  for (/**/; i<nTotal; i++) values[params[i]] = searchParams[params[i]];
-
-  var decodedValues = {};
-  forEach(values, function (value, key) {
+  function addValue(value, key) {
     if (isDefined(typeMap[key])) {
-      decodedValues[key] = types[typeMap[key]].decode(value);
+      var pattern = new RegExp(types[typeMap[key]].pattern);
+      if (pattern.exec(value)) {
+        values[key] = types[typeMap[key]].decode(value);
+      }
     }
     else {
-      decodedValues[key] = value;
+      values[key] = value;
     }
-  });
+  }
 
-  return decodedValues;
+  if (nPath !== m.length - 1) throw new Error("Unbalanced capture group in route '" + this.source + "'");
+
+  for (i=0; i<nPath; i++)   addValue(m[i+1], params[i]);
+  for (/**/; i<nTotal; i++) addValue(searchParams[params[i]], params[i]);
+
+  return values;
 };
 
 /**
