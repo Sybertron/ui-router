@@ -5,11 +5,6 @@
  * @license MIT License, http://www.opensource.org/licenses/MIT
  */
 
-/* commonjs package manager support (eg componentjs) */
-if (module && exports && module.exports === exports){
-  module.exports = 'ui.router';
-}
-
 (function (window, angular, undefined) {
 /*jshint globalstrict:true*/
 /*global angular:false*/
